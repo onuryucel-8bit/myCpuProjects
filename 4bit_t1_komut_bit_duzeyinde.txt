@@ -1,0 +1,117 @@
+========
+21.06.23
+========
+
+ir  => instruction register
+pc  => program counter
+mar => memory address register
+cr  => command register
+
+T0:
+-------
+pc++; 	  //pc_enable
+mar = pc; //pc_output_to_addressline,mar_we
+
+T1:
+-------
+ir = ram[mar]; //ram_output_enable,ram_output_to_dataline,ins_we
+
+T2:
+-------
+cr = ir;
+
+----=====================-----
+
+<HLT>
+T3:
+clock = false;
+
+----------<LDA>----------
+T3:
+//load right_bit
+pc++;
+mar = pc;
+ir = ram[mar];
+right_bit = ir;
+
+//load left_bit
+pc++;
+mar = pc;
+ir = ram[mar];
+left_bit = ir;
+
+//load to acc
+mar = address;
+acc = mar[mar];
+
+<STR>
+
+T3:
+
+pc++;
+mar = pc;
+right_bit = ram[mar];
+
+pc++;
+mar = pc;
+left_bit = ram[mar];
+
+mar = address;
+ram[mar] = acc;
+
+<ADD>
+acc = acc + rega;
+SEND_opcode(ADD);
+
+-----<SUB>-------
+rega = ram[adres];
+acc = acc - rega;
+-----------------
+
+pc++;
+mar = pc;
+right_bit = ram[mar];
+
+pc++;
+mar = pc;
+left_bit = ram[mar];
+
+mar = address;
+
+rega = ram[mar];
+
+-----<AND>-----
+pc++;
+mar = pc;
+right_bit = ram[mar];
+
+pc++;
+mar = pc;
+left_bit = ram[mar];
+
+mar = address;
+
+rega = ram[mar];
+
+acc = acc AND rega
+
+-----<OR>-----
+-----<XOR>----
+-----<NOT>----
+send(NOT);
+aluOutput,acc_we;
+
+-----<INC>----
+-----<OUT>----
+regout = rega;
+-----<JMP>----
+take left and right bits
+pc = address;
+-----<JNE>----
+-----<JE>-----
+-----<JLT>----
+-----<JGT>----
+
+
+
+

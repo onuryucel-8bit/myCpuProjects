@@ -1,0 +1,36 @@
+====ACC====
+0- acc_Clear
+1- acc_we
+2- acc_output_to_dataLine
+
+====CPU====
+3- cpu_output_to_dataline
+
+====RegA===
+4- rega_clear
+5- rega_we
+
+====regOut===
+6- regout_clear
+7- regout_we
+
+====inst.Reg===
+8- ins_clear
+9- ins_we
+
+==== RAM ===
+10- ram_output_to_dataline
+11- ram_input_in_dataline
+12- ram_output_enable
+13- ram_write_enable
+
+===MAR
+14- mar_clear
+15- mar_we
+
+===PC
+16- pc_output_to_addressline
+17- pc_clear
+18- pc_enable
+19- pc_loadData_enable
+20- pc_input_get_dataline

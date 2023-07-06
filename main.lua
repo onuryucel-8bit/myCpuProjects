@@ -1,9 +1,9 @@
 
 local info = {
-    version = "0.1",
+    version = "0.2",
     data_line = "4-bit",
     address_line = "8-bit",
-    maxCommand_line = 86,
+    maxCommand_line = 86,--en fazla 86 satir kod yazilabilir
     ram = "256 x 4 :: 1kb",
     command_limit = 16
 }
@@ -19,18 +19,23 @@ local commandSet = {
     OR  = "6",
     XOR = "7",
 
-    INC = "8",
-    DEC = "9",
-    OUT = "A",
-    JMP = "B",
+    NOT = "8",
+    INC = "9",
+    DEC = "A",
+    JEZ = "B",
 
-    JNE = "C",
-    JE  = "D",
-    JLT = "E",
-    JGT = "F"
+    JNZ = "C",
+    CRA = "D",
+    JMP = "E",
+    OUT = "F",
+
+    PUT = "assembler_command_1"
 }
 
-local startingPoint
+local assembler_commands = {
+    "START",
+    "LET"
+}
 
 local ram_type_plain =[[v3.0 hex words plain
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -43,29 +48,174 @@ local ram_type_plain =[[v3.0 hex words plain
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 ]]
 
-local ram = [[v3.0 hex words addressed
-00: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-20: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-40: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-60: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-80: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-a0: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-c0: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
-e0: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]]
+local error_Line = 1
+local startingPoint
 
+local memory_limit = 256
+local memory_used = 0
 
---[[
-TODOS 
--create_Ram
--fix startingPoint of program
-]]--
+local error_found = false
 
-local create_Ram = function (size)
-    local ram = ""
+local error_message = "default error"
+
+local ram_pos_x = 1
+
+local HEX_TO_DECIMAL_NUMBERS = {
+    "1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"
+}
+
+---comment
+---@param str string
+---@return number
+local hex_to_decimal = function (str)
+       
+    --let str FF
+    local sum = 0
+    --power_ofHEX will be  = 2 - 1 = 1
+    local power_ofHEX = #str - 1 
     
-    --code here
+    for i = 1, #str, 1 do
+
+        --sub_str will be F
+        local sub_str = string.sub(str,i,i)
+
+        for index, value in ipairs(HEX_TO_DECIMAL_NUMBERS) do
+
+            if sub_str == value then
+                sum = sum + index * 16^power_ofHEX
+                power_ofHEX = power_ofHEX - 1
+                
+            elseif sub_str == "0" then
+                power_ofHEX = power_ofHEX - 1
+                break
+            end
+        end    
+    end
+    
+    return math.floor(sum)
+end
+
+---comment
+---@return table
+local create_Ram = function ()
+    local ram = {}
+    
+    print("ENTER: address bit width")
+    --local address_bit_width = io.read("l")
+
+    print("ENTER: data bit width")
+    --local data_bit_width = io.read("l")
+
+    --print(2 ^ address_bit_width.. " " .. data_bit_width)
+
+    --create ram array 32x8
+    for i = 1, 256, 1 do
+        ram[i] = "0"
+    end
 
     return ram
+end
+
+---comment
+---@param ram table
+---@return string
+local translate_ram_to_string = function (ram)
+
+    
+
+    --translate ram to string
+    local str = ""
+    for i = 1, 8*32, 1 do
+        str = str .. ram[i]
+    end
+    
+    return str
+end
+
+---comment
+---@param error_Line integer
+---@param error_message string
+local showError = function (error_Line,error_message)
+    print()
+    print("Syntax ERROR at line: "..error_Line + 1 .." :: "..error_message .. "\n")
+    error_found = true
+end
+
+---comment
+---@param line string
+---@param token string
+---@param ram table
+local is_token_valid = function(line,token,ram)
+
+    local right_bit_address
+    local left_bit_address
+    ---is token valid---
+    for key, value in pairs(commandSet) do
+        
+        if token == key then
+
+            if key == "HLT" or key == "OUT" or key == "NOT" or key == "DEC" or key == "INC" then
+                ram[ram_pos_x] = value
+                ram_pos_x = ram_pos_x + 1
+
+            elseif key == "PUT" then
+
+                local address = hex_to_decimal(string.sub(line,5,6)) + 1
+                local variable_4bit = string.sub(line,8,8)
+
+                ram[address] = variable_4bit
+                
+            else
+
+                left_bit_address = string.sub(line,5,5)
+                right_bit_address = string.sub(line,6,6)
+
+                --load command
+                ram[ram_pos_x] = value
+                ram_pos_x = ram_pos_x + 1
+                    
+                --load address
+                ram[ram_pos_x] = left_bit_address
+                ram_pos_x = ram_pos_x + 1
+
+                ram[ram_pos_x] = right_bit_address
+                ram_pos_x = ram_pos_x + 1
+
+                
+            end 
+            
+            return
+
+        end --IF END TOKEN == ..
+        
+    end --FOR END
+        --#endregion
+
+    if error_found == false then
+        
+        showError(error_Line,"invalid token")
+        return 
+    end
+    
+end
+
+---comment
+---@param line string
+---@return string
+local get_token = function (line)
+    
+    local token = ""
+
+    for i = 1, #line, 1 do
+
+        if string.sub(line,i,i) == " " then
+            break            
+        else                
+            token = token .. string.sub(line,i,i)
+        end
+    end
+
+    return token
 end
 
 local get_StartingPosition = function (line)
@@ -79,13 +229,8 @@ local get_StartingPosition = function (line)
         index = index + 1
     end
     
+    startingIndex = startingPoint
     print("program starting index:" .. program_StartIndex)
-end
-
-local showError = function (error_Line,error_message)
-    print()
-    print("Syntax ERROR at line: "..error_Line.." :: "..error_message .. "\n")
-    
 end
 
 local replace_char = function(pos, str, r)
@@ -107,27 +252,31 @@ local write_source = function (text_output)
     local ram_Start = 22
     local output_index = 1
     
-    while output_index < text_output:len() do
+    while output_index < text_output:len() + 1 do
 
         --123456789abcde
         --a*bc,d*ef,g*tw
         
         ram_type_plain = replace_char(ram_Start,ram_type_plain,text_output:sub(output_index,output_index))
         
-        output_index = output_index + 2
+        
+        output_index = output_index + 1
         ram_Start = ram_Start + 2 -- ram position
         
 
     end
     
+    
     print("------OUTPUT------")
-    print(ram_type_plain)
+    --print(ram_type_plain)
 
     file_output:write(ram_type_plain)
     file_output:close()
 end
 
 local Assembler = function ()
+
+    local ram = create_Ram()
 
     print("------------------")
     local file = io.open("input.txt","r")
@@ -139,7 +288,7 @@ local Assembler = function ()
     local line = file:read("L")
     
     if string.sub(line,1,6) ~= "START:" then
-        print("ERROR start")
+        showError(0,"START missing")
         return
     end
 
@@ -147,114 +296,27 @@ local Assembler = function ()
 
     --#region readCommand
     
-    local error_message = "default error"
-    local foundit = false
-    local error_Line = 1
-
     line = file:read("l")
 
-    local text_output = ""
-
-    local token = ""
-    local address
-
-    local memory_limit = 256
-    local memory_used = 0
-
-    local array_ram = {}
-    for i = 1, 256, 1 do
-        table.insert(array_ram,0)
-    end
+    local token
 
     while line ~= nil do
         
         line = string.upper(line)
-        foundit = false
+        error_found = false
         token = ""
-        address = ""
         
-        --#region tokens
-        ---Get token---
-        for i = 1, #line, 1 do
 
-            if string.sub(line,i,i) == " " then
-                break            
-            else                
-                token = token .. string.sub(line,i,i)
-            end
-        end
-        --print("TOKEN:"..token)
-
-        ---is token valid---
-        for key, value in pairs(commandSet) do
-            
-            if token == key then
-                
-                --PUT <address> <data>
-                if key == "PUT" then
-                    local dec_addr = tonumber("address",16)
-                end
-
-                
-                if key == "HLT" or key == "OUT" then
-                    
-                    --ELSE  HLT or OUT
-                    memory_used = memory_used + 1
-                     
-                    if memory_used > memory_limit then
-                        foundit = false
-                        error_message = "Memory limit exceed"
-                        break
-                    end
- 
-                    text_output = text_output .. value .. ","                 
-                    foundit = true
-                    break
-
-                ---take address
-                else
-                    
-                    ---ADD f
-                    memory_used = memory_used + 3
-                    
-
-                    if memory_used > memory_limit then
-                        foundit = false
-                        error_message = "Memory limit exceed"
-                        break
-                    end
-
-                    if string.sub(line,4,5) == " " then
-                        error_message = "you forget the address"
-                        foundit = false
-                        break
-                    end
-
-                    
-                    address = string.sub(line,5,6)
-                    
-                    text_output = text_output .. value .. "*" .. string.sub(address,1,1) .. "*" .. string.sub(address,2,2) .. ","
-                    
-                    foundit = true
-                    break
-                end
-
-            
-            end --IF END TOKEN == ..
+        token = get_token(line)
         
-        end --FOR END
-        --#endregion
-
-        if foundit == false then
-            
-            showError(error_Line,error_message)
-            return
-        end
+        is_token_valid(line,token,ram)
 
         error_Line = error_Line + 1
-        --print(text_output)
-        
-        
+
+        if error_found then
+            file:close()
+            return
+        end
 
         line = file:read("l")
     end
@@ -263,9 +325,16 @@ local Assembler = function ()
 
     --#endregion
     
-    write_source(text_output)
+    local machine_code = translate_ram_to_string(ram)
+    
+    write_source(machine_code)
 
 end
 
+
+--print(hex_to_decimal("FF"))
+print("================== PROGRAM STARTED =====================")
 Assembler()
+--local a = "1AF3DD00000000000000000000000000"
+--print(#a)
 

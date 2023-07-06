@@ -1,21 +1,21 @@
-0000      	0 HLT 	   	//clock = false
-0001 0000_0000  1 LDA ram[adres]//acc = ram[adres] adres => 8bit
-0010 0000_0000  2 STR  		//ram[adres] = acc
-0011 		3 ADD 	 	//rega = ram[adres]; acc = acc + rega;
+0000    0 HLT 	//clock = false
+0001 		1 LDA 	//ram[adres]//acc = ram[adres] adres => 8bit
+0010   	2 STR  	//ram[adres] = acc
+0011 		3 ADD 	//rega = ram[adres]; acc = acc + rega;
 
 0100 		4 SUB		//rega = ram[adres]; acc = acc - rega;
-0101		5 AND		//acc = acc AND rega
-0110		6 OR		//acc = acc OR  rega
-0111		7 XOR		//acc = acc XOR rega
+0101		5 AND		//rega = ram[adres]; acc = acc AND rega
+0110		6 OR		//rega = ram[adres]; acc = acc OR  rega
+0111		7 XOR		//rega = ram[adres]; acc = acc XOR rega
 
-1000		8 NOT           //acc = NOT acc
+1000		8 NOT   //acc = NOT acc
 1001		9 INC		//acc = acc + 1
-1010		A DEC    	//acc = acc - 1
-1011            B OUT		//outputReg = acc;
+1010		A DEC   //acc = acc - 1
+1011    B JEZ		//if acc == 0; pc = adr;
 
-1100	        C JMP 		//pc = ram[adres];
-1101		D BR		//branch
-1110		E JC		//jump carry if carry != 0 with ADD: jump to given address
-1111		F JE  		//if acc == 0: pc...
+1100	  C JNZ 	//if acc != 0; pc = adr;
+1101		D CRA		//select(ram_1...ram_4);
+1110		E JMP		//pc = adr;
+1111		F OUT		//out = acc;
 
 
